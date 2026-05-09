@@ -108,8 +108,10 @@ function formatDateTime(iso) {
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 function getNow() {
-  const d = new Date(); d.setSeconds(0,0);
-  return d.toISOString().slice(0,16);
+  const d = new Date();
+  d.setSeconds(0, 0);
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d - offset).toISOString().slice(0, 16);
 }
 function toScale(v) { return (((v + 1) / 6) * 9 + 1).toFixed(1); }
 
@@ -438,11 +440,14 @@ function bindEvents() {
   const recordBtn = document.getElementById("record-btn");
   if (recordBtn) {
     recordBtn.onclick = () => {
-      recordBtn.classList.remove("bounce");
-      void recordBtn.offsetWidth; // reflow強制
-      recordBtn.classList.add("bounce");
-      setTimeout(() => recordBtn.classList.remove("bounce"), 400);
-      const date = new Date(state.customDate).toISOString();
+      recordBtn.style.transform = "scale(0.93)";
+      recordBtn.style.transition = "transform 0.15s ease";
+      setTimeout(() => {
+        recordBtn.style.transform = "scale(1)";
+      }, 150);
+      const localDate = new Date(state.customDate);
+      const offset = localDate.getTimezoneOffset() * 60000;
+      const date = new Date(localDate - offset).toISOString();
       const entry = { date, mood: state.selected, note: state.note };
       const newLogs = [...state.logs, entry].sort((a,b) => new Date(a.date) - new Date(b.date));
       saveLogs(newLogs);
