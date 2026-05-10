@@ -110,8 +110,8 @@ function formatDateTime(iso) {
 function getNow() {
   const d = new Date();
   d.setSeconds(0, 0);
-  const offset = d.getTimezoneOffset() * 60000;
-  return new Date(d - offset).toISOString().slice(0, 16);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 function toScale(v) { return (((v + 1) / 6) * 9 + 1).toFixed(1); }
 
@@ -274,13 +274,13 @@ function renderGraph() {
     if (thisW.length >= 2) {
       const thisAvg = thisW.reduce((s,l) => s + l.mood, 0) / thisW.length;
       const spread = Math.max(...thisW.map(l=>l.mood)) - Math.min(...thisW.map(l=>l.mood));
-      if (spread >= 4) { patternMsg = "今週は波が大きめです"; patternColor = "#f59e0b"; }
+      if (spread >= 4) { patternMsg = "今週は感情の振れ幅が大きめです"; patternColor = "#f59e0b"; }
       else if (lastW.length >= 2) {
         const lastAvg = lastW.reduce((s,l) => s + l.mood, 0) / lastW.length;
         const diff = thisAvg - lastAvg;
-        if (diff <= -0.8) { patternMsg = "先週より気分が低めです"; patternColor = "#818cf8"; }
-        else if (diff >= 0.8) { patternMsg = "先週より気分が高めです"; patternColor = "#fbbf24"; }
-        else { patternMsg = "今週は比較的に安定しています"; patternColor = "#60a5fa"; }
+        if (diff <= -0.8) { patternMsg = "先週より少し沈み気味です"; patternColor = "#818cf8"; }
+        else if (diff >= 0.8) { patternMsg = "先週より気分は上向きです"; patternColor = "#fbbf24"; }
+        else { patternMsg = "今週は比較的フラットに過ごせています"; patternColor = "#60a5fa"; }
       }
     }
 
@@ -391,8 +391,14 @@ function drawChart() {
 
 function renderHistory() {
   const modal = renderHistoryModal();
+  const importBtn = `<label id="import-label" style="padding:6px 12px;border-radius:8px;background:#1e293b;color:#a3e635;font-size:12px;font-weight:600;cursor:pointer">⬆ 読込
+    <input type="file" id="import-input" accept=".json" style="display:none" />
+  </label>`;
   if (state.logs.length === 0) {
-    return `<div style="font-size:12px;color:#475569;margin-bottom:16px;letter-spacing:1px">記録履歴（0件）</div>
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:12px;color:#475569;letter-spacing:1px">記録履歴（0件）</div>
+      <div style="display:flex;gap:8px">${importBtn}</div>
+    </div>
     <div style="text-align:center;color:#475569;padding:60px 0;font-size:14px">まだ記録がありません</div>${modal}`;
   }
   const items = [...state.logs].reverse().map((log, i) => {
@@ -455,9 +461,7 @@ function bindEvents() {
       setTimeout(() => {
         recordBtn.style.transform = "scale(1)";
       }, 150);
-      const localDate = new Date(state.customDate);
-      const offset = localDate.getTimezoneOffset() * 60000;
-      const date = new Date(localDate.getTime() - offset).toISOString();
+      const date = new Date(state.customDate).toISOString();
       const entry = { date, mood: state.selected, note: state.note };
       const newLogs = [...state.logs, entry].sort((a,b) => new Date(a.date) - new Date(b.date));
       saveLogs(newLogs);
