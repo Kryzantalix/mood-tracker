@@ -413,7 +413,8 @@ function renderHistory() {
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div style="font-size:12px;color:#475569;letter-spacing:1px">記録履歴（${state.logs.length}件）</div>
       <div style="display:flex;gap:8px">
-        <button id="export-btn" style="padding:6px 12px;border-radius:8px;border:none;background:#1e293b;color:#60a5fa;font-size:12px;font-weight:600;cursor:pointer">⬇ 保存</button>
+        <button id="export-btn" style="padding:6px 12px;border-radius:8px;border:none;background:#1e293b;color:#60a5fa;font-size:12px;font-weight:600;cursor:pointer">⬇ JSON</button>
+        <button id="export-txt-btn" style="padding:6px 12px;border-radius:8px;border:none;background:#1e293b;color:#f59e0b;font-size:12px;font-weight:600;cursor:pointer">⬇ テキスト</button>
         <label id="import-label" style="padding:6px 12px;border-radius:8px;background:#1e293b;color:#a3e635;font-size:12px;font-weight:600;cursor:pointer">⬆ 読込
           <input type="file" id="import-input" accept=".json" style="display:none" />
         </label>
@@ -454,7 +455,9 @@ function bindEvents() {
       setTimeout(() => {
         recordBtn.style.transform = "scale(1)";
       }, 150);
-      const date = new Date(state.customDate).toISOString();
+      const localDate = new Date(state.customDate);
+      const offset = localDate.getTimezoneOffset() * 60000;
+      const date = new Date(localDate.getTime() - offset).toISOString();
       const entry = { date, mood: state.selected, note: state.note };
       const newLogs = [...state.logs, entry].sort((a,b) => new Date(a.date) - new Date(b.date));
       saveLogs(newLogs);
@@ -484,6 +487,37 @@ function bindEvents() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `mood-log-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportTxtBtn = document.getElementById("export-txt-btn");
+  if (exportTxtBtn) exportTxtBtn.onclick = () => {
+    const MOOD_MAP_LOCAL = Object.fromEntries([
+      [5,"⚡ 躁状態"],[4,"☀️ 軽躁"],[3,"🌤 やや高め"],[2,"⛅ 混合"],
+      [1,"🌧 やや低め"],[0,"🌩 軽い鬱"],[-1,"🌑 鬱状態"]
+    ]);
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+    let text = `=== MOOD LOG ===
+エクスポート日: ${dateStr}
+
+`;
+    state.logs.forEach(l => {
+      const d = new Date(l.date);
+      const dt = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+      text += `---
+日時: ${dt}
+気分: ${MOOD_MAP_LOCAL[l.mood] || l.mood}
+メモ: ${l.note || "なし"}
+
+`;
+    });
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mood-log-${new Date().toISOString().slice(0,10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
